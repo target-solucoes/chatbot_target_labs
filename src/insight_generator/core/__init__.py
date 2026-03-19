@@ -1,0 +1,56 @@
+"""Core configuration module for insight_generator."""
+
+from .settings import (
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
+    REASONING_EFFORT,
+    MAX_COMPLETION_TOKENS,
+    MAX_INSIGHTS,
+    TRANSPARENCY_THRESHOLD,
+    DEFAULT_TOP_N,
+    ENABLE_METRIC_CACHE,
+    CACHE_TTL_SECONDS,
+    VALID_CHART_TYPES,
+    STATUS_PENDING,
+    STATUS_PROCESSING,
+    STATUS_SUCCESS,
+    STATUS_ERROR,
+    INSIGHT_MODEL_DEFAULT,
+    INSIGHT_MODEL_LITE,
+    INSIGHT_TEMPERATURE_DEFAULT,
+    validate_settings,
+)
+
+from .intent_enricher import (
+    IntentEnricher,
+    EnrichedIntent,
+    Polarity,
+    TemporalFocus,
+    ComparisonType,
+)
+
+__all__ = [
+    "OPENAI_API_KEY",
+    "OPENAI_MODEL",
+    "REASONING_EFFORT",
+    "MAX_COMPLETION_TOKENS",
+    "MAX_INSIGHTS",
+    "TRANSPARENCY_THRESHOLD",
+    "DEFAULT_TOP_N",
+    "ENABLE_METRIC_CACHE",
+    "CACHE_TTL_SECONDS",
+    "VALID_CHART_TYPES",
+    "STATUS_PENDING",
+    "STATUS_PROCESSING",
+    "STATUS_SUCCESS",
+    "STATUS_ERROR",
+    "INSIGHT_MODEL_DEFAULT",
+    "INSIGHT_MODEL_LITE",
+    "INSIGHT_TEMPERATURE_DEFAULT",
+    "validate_settings",
+    "IntentEnricher",
+    "EnrichedIntent",
+    "Polarity",
+    "TemporalFocus",
+    "ComparisonType",
+]

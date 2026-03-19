@@ -1,0 +1,23 @@
+services:
+  analytics-chatbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/target-solucoes/analytics-chatbot:${VERSION:-latest}
+    container_name: analytics-chatbot
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      # Logs persistentes
+      - ./logs:/app/logs
+      # Output de graficos
+      - ./data/output:/app/data/output
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

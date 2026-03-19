@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Git
+.git/
+.gitignore
+
+# Environment (segredos)
+.env
+
+# Logs locais
+logs/
+*.log
+
+# Testes
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentacao
+*.md
+!README.md
+
+# Arquivos temporarios
+temp.md
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/

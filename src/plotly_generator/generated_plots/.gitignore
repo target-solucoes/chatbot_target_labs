@@ -1,0 +1,8 @@
+# Ignorar todos os arquivos gerados
+*.html
+*.png
+*.json
+
+# Manter o diretorio
+!.gitignore
+!README.md

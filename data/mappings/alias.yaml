@@ -1,0 +1,623 @@
+# ============================================================================
+# CLASSIFICACAO POR TIPO DE DADO
+# ============================================================================
+# Esta secao classifica as colunas do dataset por tipo para facilitar
+# a selecao automatica de funcoes de agregacao pelos agentes.
+#
+# Dataset: Cubo Sell-Out Chatbot (Baruel / IQVIA)
+# Contexto: Dados de sell-out (vendas ao consumidor) de produtos pedicos
+#           no canal Farma, incluindo marcas Baruel e concorrencia.
+#
+# - numeric: Colunas quantitativas que devem usar SUM() como agregacao padrao
+# - categorical: Colunas qualitativas que devem usar COUNT() ou COUNT DISTINCT
+# ============================================================================
+column_types:
+  numeric:
+    - unidade
+    - valor
+    - ano_mes
+    - ean
+    - ano
+    - mes
+
+  temporal:
+    - periodo
+    - data_lancamento
+
+  categorical:
+    - canal
+    - uf
+    - catalog
+    - uf_montada
+    - regiao
+    - macro_regiao
+    - descricao
+    - fabricante
+    - marca
+    - categoria
+    - categoria_com_range
+    - subcategoria
+    - gramatura
+    - regular_promo_refil
+    - mercado
+    - baruel_concorrencia
+    - range_gramatura
+    - marca_montada
+    - fragrancia
+    - publico
+    - tipo
+    - beneficio
+    - rotina
+    - lancamento
+    - canal_macro
+    - canal_interno
+
+# ============================================================================
+# PRIORIZACAO DE METRICAS
+# ============================================================================
+# Esta secao define qual metrica priorizar em contextos ambiguos.
+# Escalavel: cada dataset define suas prioridades sem hardcode.
+#
+# - default_metric: Metrica padrao para queries genericas (ex: "top marcas")
+#     Usada quando nenhum keyword especifico e detectado.
+#
+# - aggregation_metric: Metrica preferida para agregacoes SUM/ranking
+#     (ex: "top marcas em vendas", "faturamento por regiao")
+#     Representa o valor acumulado real, ideal para SUM e rankings.
+#
+# Logica de priorizacao no MetricDetector:
+# 1. Se ha keyword match direto no alias.yaml -> usa o match
+# 2. Se ha ambiguidade entre metricas -> prioriza aggregation_metric
+# 3. Se nenhum match -> usa default_metric
+# 4. Ultimo fallback -> primeira coluna numerica
+# ============================================================================
+metric_priority:
+  default_metric: valor
+  aggregation_metric: valor
+
+
+# ============================================================================
+# MAPEAMENTO TEMPORAL
+# ============================================================================
+temporal_mapping:
+  primary_column: periodo
+  derived_columns:
+    ano: year
+    mes: month
+    ano_mes: year_month
+
+# ============================================================================
+# MAPEAMENTO DE ALIASES (ESTRUTURA ORIGINAL)
+# ============================================================================
+columns:
+  # --------------------------------------------------------------------------
+  # METRICAS / COLUNAS NUMERICAS
+  # --------------------------------------------------------------------------
+  valor:
+    - "vendas"
+    - "venda"
+    - "faturamento"
+    - "receita"
+    - "valor"
+    - "valor vendido"
+    - "valor de venda"
+    - "valor de vendas"
+    - "sell out em reais"
+    - "sell out reais"
+    - "sellout reais"
+    - "sell-out reais"
+    - "sell out r$"
+    - "sell out valor"
+    - "sellout valor"
+    - "receita de vendas"
+    - "valor total"
+    - "total vendido"
+    - "total de vendas"
+    - "valor faturado"
+    - "montante"
+    - "revenue"
+    - "sales"
+
+  unidade:
+    - "unidades"
+    - "unidades vendidas"
+    - "quantidade vendida"
+    - "volume"
+    - "volume vendido"
+    - "volume de vendas"
+    - "qtd vendida"
+    - "quantidade"
+    - "sell out unidades"
+    - "sell out unidade"
+    - "sellout unidades"
+    - "sell-out unidades"
+    - "pecas"
+    - "pecas vendidas"
+    - "itens vendidos"
+    - "total de unidades"
+    - "qtd"
+    - "units"
+
+  # --------------------------------------------------------------------------
+  # DIMENSOES TEMPORAIS
+  # --------------------------------------------------------------------------
+  ano:
+    - "ano"
+    - "anos"
+    - "year"
+    - "periodo anual"
+    - "ano de referencia"
+    - "exercicio"
+
+  mes:
+    - "mes"
+    - "meses"
+    - "month"
+    - "periodo mensal"
+    - "mes de referencia"
+
+  periodo:
+    - "periodo"
+    - "mes e ano"
+    - "mes/ano"
+    - "competencia"
+    - "referencia"
+    - "periodo de referencia"
+    - "mes ano"
+    - "data de referencia"
+    - "data referencia"
+
+  ano_mes:
+    - "ano mes"
+    - "anomes"
+    - "ano-mes"
+    - "periodo yyyymm"
+    - "periodo numerico"
+
+  data_lancamento:
+    - "data de lancamento"
+    - "data lancamento"
+    - "quando lancou"
+    - "lancado em"
+    - "data do lancamento"
+
+  # --------------------------------------------------------------------------
+  # DIMENSOES GEOGRAFICAS
+  # --------------------------------------------------------------------------
+  uf:
+    - "estado"
+    - "estados"
+    - "uf"
+    - "unidade federativa"
+    - "sigla do estado"
+    - "sigla estado"
+
+  uf_montada:
+    - "uf montada"
+    - "uf agrupada"
+    - "estado agrupado"
+    - "estados agrupados"
+    - "uf consolidada"
+    - "grupo de estados"
+    - "grupo de uf"
+
+  regiao:
+    - "regiao"
+    - "regioes"
+    - "regiao geografica"
+    - "regiao do brasil"
+    - "region"
+
+  macro_regiao:
+    - "macro regiao"
+    - "macrorregiao"
+    - "macro"
+    - "neno"
+    - "sseco"
+    - "regiao baruel"
+    - "regiao macro"
+
+  # --------------------------------------------------------------------------
+  # DIMENSOES DE CANAL
+  # --------------------------------------------------------------------------
+  canal:
+    - "canal"
+    - "canais"
+    - "canal de venda"
+    - "canal de vendas"
+    - "canal farma"
+    - "tipo de canal"
+    - "channel"
+
+  canal_interno:
+    - "canal interno"
+    - "canal baruel"
+    - "nomenclatura interna"
+    - "nome do canal"
+    - "canal detalhado"
+
+  canal_macro:
+    - "canal macro"
+    - "macro canal"
+    - "canal principal"
+    - "segmento de canal"
+
+  # --------------------------------------------------------------------------
+  # DIMENSOES DE PRODUTO - IDENTIFICACAO
+  # --------------------------------------------------------------------------
+  ean:
+    - "ean"
+    - "codigo de barras"
+    - "codigo ean"
+    - "barcode"
+    - "gtin"
+    - "codigo do produto"
+    - "sku"
+    - "codigo sku"
+
+  descricao:
+    - "descricao"
+    - "descricao do produto"
+    - "nome do produto"
+    - "produto"
+    - "produtos"
+    - "item"
+    - "itens"
+    - "product"
+    - "descritivo"
+
+  # --------------------------------------------------------------------------
+  # DIMENSOES DE PRODUTO - MARCA E FABRICANTE
+  # --------------------------------------------------------------------------
+  fabricante:
+    - "fabricante"
+    - "fabricantes"
+    - "empresa"
+    - "empresa fabricante"
+    - "quem fabrica"
+    - "manufacturer"
+    - "industria"
+    - "laboratorio"
+
+  marca:
+    - "marca"
+    - "marcas"
+    - "brand"
+    - "marca do produto"
+    - "nome da marca"
+    - "marca comercial"
+
+  marca_montada:
+    - "marca montada"
+    - "marca padronizada"
+    - "marca agrupada"
+    - "marca consolidada"
+    - "marca e fabricante"
+
+  baruel_concorrencia:
+    - "baruel ou concorrencia"
+    - "baruel concorrencia"
+    - "baruel vs concorrencia"
+    - "concorrencia"
+    - "concorrente"
+    - "concorrentes"
+    - "fabricante baruel"
+    - "e baruel"
+    - "proprio ou concorrente"
+
+  # --------------------------------------------------------------------------
+  # DIMENSOES DE PRODUTO - CLASSIFICACAO
+  # --------------------------------------------------------------------------
+  mercado:
+    - "mercado"
+    - "segmento de mercado"
+    - "segmento"
+    - "market"
+
+  categoria:
+    - "categoria"
+    - "categorias"
+    - "category"
+    - "linha de produto"
+    - "linha"
+
+  subcategoria:
+    - "subcategoria"
+    - "subcategorias"
+    - "sub categoria"
+    - "sub-categoria"
+    - "tipo de apresentacao"
+    - "apresentacao"
+    - "formato"
+    - "formato do produto"
+
+  categoria_com_range:
+    - "categoria com range"
+    - "categoria com gramatura"
+    - "categoria e faixa"
+    - "categoria e range"
+    - "segmento por gramatura"
+
+  # --------------------------------------------------------------------------
+  # DIMENSOES DE PRODUTO - ATRIBUTOS
+  # --------------------------------------------------------------------------
+  gramatura:
+    - "gramatura"
+    - "peso"
+    - "tamanho"
+    - "ml"
+    - "gramas"
+    - "conteudo"
+    - "capacidade"
+    - "peso do produto"
+    - "tamanho do produto"
+
+  range_gramatura:
+    - "range de gramatura"
+    - "faixa de gramatura"
+    - "faixa de peso"
+    - "faixa de volume"
+    - "range de peso"
+
+  fragrancia:
+    - "fragrancia"
+    - "fragrancias"
+    - "aroma"
+    - "perfume"
+    - "cheiro"
+    - "essencia"
+    - "fragrance"
+    - "tipo de fragrancia"
+
+  publico:
+    - "publico"
+    - "publico alvo"
+    - "publico-alvo"
+    - "genero"
+    - "sexo"
+    - "masculino feminino"
+    - "para quem"
+    - "target"
+    - "audiencia"
+
+  tipo:
+    - "tipo"
+    - "tipo de produto"
+    - "tipo do produto"
+    - "formato de aplicacao"
+    - "forma"
+
+  beneficio:
+    - "beneficio"
+    - "beneficios"
+    - "propriedade"
+    - "funcao do produto"
+
+  rotina:
+    - "rotina"
+    - "rotina de uso"
+    - "momento de uso"
+    - "ocasiao de uso"
+
+  # --------------------------------------------------------------------------
+  # DIMENSOES COMERCIAIS
+  # --------------------------------------------------------------------------
+  regular_promo_refil:
+    - "regular promo refil"
+    - "tipo de operacao"
+    - "tipo operacao"
+    - "promocional"
+    - "promo"
+    - "promocao"
+    - "regular ou promo"
+    - "e promocao"
+    - "refil"
+    - "regular"
+    - "tipo de venda"
+
+  lancamento:
+    - "lancamento"
+    - "lancamentos"
+    - "produto novo"
+    - "novidade"
+    - "novo"
+    - "e lancamento"
+    - "produto lancado"
+
+  # --------------------------------------------------------------------------
+  # METADADOS (uso interno)
+  # --------------------------------------------------------------------------
+  catalog:
+    - "catalogo"
+    - "fonte de dados"
+    - "origem dos dados"
+    - "catalog"
+
+
+# ============================================================================
+# METRICAS COMPUTADAS
+# ============================================================================
+metrics:
+  Numero de Produtos:
+    - "Quantidade de linhas do dataset"
+    - "numero de produtos"
+    - "quantidade de produtos"
+    - "total de produtos"
+    - "quantidade de registros"
+    - "numero de registros"
+    - "total de registros"
+    - "contagem de itens"
+    - "quantos produtos"
+
+  Market Share:
+    - "market share"
+    - "participacao de mercado"
+    - "share"
+    - "fatia de mercado"
+    - "percentual de mercado"
+    - "ms"
+    - "ms%"
+    - "participacao"
+
+
+# ============================================================================
+# AGRUPAMENTO POR CATEGORIAS SEMANTICAS
+# ============================================================================
+categories:
+  temporal:
+    - "ano"
+    - "mes"
+    - "periodo"
+    - "ano_mes"
+  geografico:
+    - "uf"
+    - "uf_montada"
+    - "regiao"
+    - "macro_regiao"
+  canal_vendas:
+    - "canal"
+    - "canal_interno"
+    - "canal_macro"
+  identificacao_produto:
+    - "ean"
+    - "descricao"
+  marca_fabricante:
+    - "fabricante"
+    - "marca"
+    - "marca_montada"
+    - "baruel_concorrencia"
+  classificacao_produto:
+    - "mercado"
+    - "categoria"
+    - "subcategoria"
+    - "categoria_com_range"
+  atributos_produto:
+    - "gramatura"
+    - "range_gramatura"
+    - "fragrancia"
+    - "publico"
+    - "tipo"
+    - "beneficio"
+    - "rotina"
+  comercial:
+    - "regular_promo_refil"
+    - "lancamento"
+    - "data_lancamento"
+  metricas:
+    - "unidade"
+    - "valor"
+  metadados:
+    - "catalog"
+
+
+# ============================================================================
+# CONVENCOES DE EXIBICAO DE VALORES
+# ============================================================================
+conventions:
+  Numero de Produtos: "Quantidade de linhas do dataset"
+  SIM: "Sim"
+  "N\xC3O": "Nao"
+  REGULAR: "Regular"
+  PROMO: "Promocional"
+  Baruel: "Baruel"
+  "Concorr\xEAncia": "Concorrencia"
+  Feminino: "Feminino"
+  Masculino: "Masculino"
+  Kids: "Kids / Infantil"
+  "N\xE3o especificado": "Nao especificado"
+  Canal Redes: "Canal Redes"
+  Canal Indep/Assoc/Franq: "Canal Independente/Associado/Franqueado"
+  FARMA REDES/TOP: "Farma Redes/Top"
+  DIST. FARMA/ATACADO FARMA: "Distribuidora Farma/Atacado Farma"
+  FARMA: "Farma"
+  NENO: "Norte/Nordeste (NENO)"
+  SSECO: "Sul/Sudeste/Centro-Oeste (SSECO)"
+  SUDESTE: "Sudeste"
+  SUL: "Sul"
+  NORDESTE: "Nordeste"
+  NORTE: "Norte"
+  CENTRO OESTE: "Centro-Oeste"
+  COSMETICOS: "Cosmeticos"
+  DESODORANTE: "Desodorante"
+  INCOMODOS: "Incomodos"
+  AEROSOL: "Aerosol"
+  CREME: "Creme"
+  PO: "Po"
+  ESFOLIANTE: "Esfoliante"
+
+
+# ============================================================================
+# HINTS DE FILTRO PARA HEURISTICAS DO QUERY ANALYZER
+# ============================================================================
+# Esta secao permite configurar entidades conhecidas que o QueryAnalyzer
+# usa para detectar necessidade de filtros nas queries do usuario.
+#
+# - valid_years: anos validos presentes no dataset
+# - known_entities.states: UFs presentes no dataset
+# - known_entities.cities: cidades (nao disponivel neste dataset)
+# ============================================================================
+filter_hints:
+  valid_years: [2023, 2024, 2025, 2026]
+  known_entities:
+    states:
+      - "AC"
+      - "AL"
+      - "AM"
+      - "AP"
+      - "BA"
+      - "CE"
+      - "DF"
+      - "ES"
+      - "GO"
+      - "MA"
+      - "MG"
+      - "MS"
+      - "MT"
+      - "PA"
+      - "PB"
+      - "PE"
+      - "PI"
+      - "PR"
+      - "RJ"
+      - "RN"
+      - "RO"
+      - "RR"
+      - "RS"
+      - "SC"
+      - "SE"
+      - "SP"
+      - "TO"
+    cities: []
+  important_values:
+    canal:
+      - "Canal Redes"
+      - "Canal Indep/Assoc/Franq"
+    canal_interno:
+      - "FARMA REDES/TOP"
+      - "DIST. FARMA/ATACADO FARMA"
+    regiao:
+      - "SUDESTE"
+      - "SUL"
+      - "NORDESTE"
+      - "NORTE"
+      - "CENTRO OESTE"
+    macro_regiao:
+      - "NENO"
+      - "SSECO"
+    categoria:
+      - "COSMETICOS"
+      - "DESODORANTE"
+      - "INCOMODOS"
+    baruel_concorrencia:
+      - "Baruel"
+      - "Concorr\xEAncia"
+    regular_promo_refil:
+      - "REGULAR"
+      - "PROMO"
+    publico:
+      - "Feminino"
+      - "Masculino"
+      - "Kids"
+    lancamento:
+      - "SIM"
+      - "N\xC3O"
