@@ -39,6 +39,7 @@ env/
 data/datasets/*
 data/output_examples/*
 !.gitkeep
+
 # Environment variables
 .env
 

@@ -97,28 +97,73 @@ def extract_filter_tools(state: Dict[str, Any]) -> List[Dict[str, Any]]:
     filter_ops = state.get("filter_operations", {})
     filter_final = state.get("filter_final", {})
 
-    return [
-        {
-            "name": "FilterParser (LLM)",
-            "description": "Usa LLM para interpretar a query em linguagem natural e extrair colunas e valores de filtro mencionados pelo usuario.",
-            "input": {
-                "query": query,
-                "filter_history": state.get("filter_history", []),
-            },
-            "output": {
-                "detected_filter_columns": detected_cols,
-                "filter_confidence": state.get("filter_confidence", 0.0),
-            },
+    tools = []
+
+    # ContextLoader
+    tools.append({
+        "name": "ContextLoader & Heuristic (Local)",
+        "description": "Analisa a query heuristicamente para decidir se necessita de filtro, carrega historico e inicializa contadores.",
+        "input": {"query": query},
+        "output": {"_filter_needs_detection": state.get("_filter_needs_detection", True)}
+    })
+
+    # RelativeTemporalResolver
+    if "temporal_resolution" in state:
+        tools.append({
+            "name": "RelativeTemporalResolver (Regex)",
+            "description": "Resolve referencias temporais relativas (ex: 'ultimo mes', 'YTD') para filtros de datas baseados na data atual.",
+            "input": {"query": query},
+            "output": state.get("temporal_resolution", {})
+        })
+
+    # PreMatchEngine
+    if "pre_match_candidates" in state:
+        tools.append({
+            "name": "PreMatchEngine & ValueCatalog (Local)",
+            "description": "Executa matching fuzzy e deterministico direto contra os valores reais do dataset indexados no ValueCatalog ANTES do LLM. Tambem avalia value_aliases.",
+            "input": {"query": query},
+            "output": {"pre_match_candidates": state.get("pre_match_candidates", [])}
+        })
+
+    # FilterParser
+    tools.append({
+        "name": "FilterParser (LLM)",
+        "description": "Usa LLM e os candidatos pre-resolvidos para interpretar a query textual e extrair colunas, valores sugeridos e operacoes CRUD.",
+        "input": {
+            "query": query,
+            "filter_history_count": len(state.get("filter_history", [])),
         },
-        {
-            "name": "FilterValidator",
-            "description": "Valida se os valores detectados existem no dataset (ex: verifica se 'SP' e um valor valido para a coluna UF_Cliente).",
-            "input": {"detected_columns": detected_cols},
-            "output": {"validation_passed": len(state.get("errors", [])) == 0},
+        "output": {
+            "detected_filter_columns": detected_cols,
+            "filter_confidence": state.get("filter_confidence", 0.0),
         },
+    })
+
+    # TemporalPeriodExpander
+    if "temporal_expansion_validation" in state:
+        tools.append({
+            "name": "TemporalPeriodExpander (Regex)",
+            "description": "Expande periodos temporais comparativos na query (ex: 'maio a junho') para garantir cobertura completa do range de datas.",
+            "input": {"query": query},
+            "output": state.get("temporal_expansion_validation", {})
+        })
+
+    # FilterValidator
+    tools.append({
+        "name": "FilterValidator (Local)",
+        "description": "Valida se os valores escolhidos pelo LLM existem de fato no ValueCatalog. Sugere correcoes fuzzy deterministicas.",
+        "input": {"detected_columns": detected_cols},
+        "output": {
+            "validation_passed": len(state.get("errors", [])) == 0,
+            "warnings": state.get("validation_warnings", [])
+        },
+    })
+
+    # Legacy operations
+    tools.extend([
         {
             "name": "OperationsIdentifier",
-            "description": "Compara os filtros atuais da sessao com os filtros detectados na query para identificar quais operacoes CRUD devem ser aplicadas (ADICIONAR, ALTERAR, REMOVER, MANTER).",
+            "description": "Compara os filtros atuais com os detectados para identificar quais operacoes CRUD deven ser aplicadas (ADICIONAR, ALTERAR, REMOVER, MANTER).",
             "input": {
                 "current_filters": current_filters,
                 "detected_columns": detected_cols,
@@ -127,7 +172,7 @@ def extract_filter_tools(state: Dict[str, Any]) -> List[Dict[str, Any]]:
         },
         {
             "name": "FilterApplicator",
-            "description": "Aplica as operacoes CRUD identificadas sobre os filtros atuais, produzindo o estado final consolidado de filtros ativos (filter_final).",
+            "description": "Aplica as operacoes CRUD identificadas sobre os filtros atuais, produzindo o estado consolidado (filter_final).",
             "input": {
                 "current_filters": current_filters,
                 "filter_operations": filter_ops,
@@ -136,11 +181,13 @@ def extract_filter_tools(state: Dict[str, Any]) -> List[Dict[str, Any]]:
         },
         {
             "name": "FilterPersistence",
-            "description": "Persiste o estado final dos filtros em sessao para que sejam reutilizados na proxima query do usuario sem precisar ser re-informados.",
+            "description": "Persiste o estado final dos filtros em sessao para reutilizacao.",
             "input": {"filter_final": filter_final},
             "output": {"persisted": True},
         },
-    ]
+    ])
+
+    return tools
 
 
 def extract_classifier_tools(state: Dict[str, Any]) -> List[Dict[str, Any]]:

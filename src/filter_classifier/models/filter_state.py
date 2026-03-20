@@ -47,6 +47,15 @@ class FilterGraphState(GraphState):
     filter_confidence: float
     """Confidence score for filter detection (0.0 to 1.0)"""
 
+    pre_match_candidates: Optional[List[Dict[str, Any]]]
+    """Pre-matched candidates generated before LLM execution"""
+
+    temporal_resolution: Optional[Dict[str, Any]]
+    """Details of relative temporal reference resolution"""
+
+    temporal_expansion_validation: Optional[Dict[str, Any]]
+    """Validation details of temporal period expansion"""
+
     # Phase 3 fields (parallel execution)
     plotly_output: Optional[Dict[str, Any]]
     """Result from plotly generator agent (figure, html, file_path, config)"""

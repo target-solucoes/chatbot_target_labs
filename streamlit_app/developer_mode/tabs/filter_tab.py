@@ -2,7 +2,7 @@ import streamlit as st
 from typing import Dict, Any
 
 def render_filter_tab(data: Dict[str, Any]):
-    st.markdown("### Filter Classifier (FASE 0)")
+    st.markdown("### Filter Classifier (Arquitetura Avançada - Otimizada)")
     
     if data.get("skipped"):
         st.warning("A Fase 0 (Filter Classifier) foi pulada pois a query não continha filtros ou necessidade de classificação condicional.")

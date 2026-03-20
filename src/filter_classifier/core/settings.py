@@ -27,59 +27,9 @@ SESSION_TIMEOUT_MINUTES: int = int(os.getenv("FILTER_SESSION_TIMEOUT", "30"))
 FUZZY_THRESHOLD: float = float(os.getenv("FILTER_FUZZY_THRESHOLD", "0.75"))
 MIN_CONFIDENCE_THRESHOLD: float = float(os.getenv("FILTER_MIN_CONFIDENCE", "0.60"))
 
-# Value Validation (NEW - for detecting non-existent values like "PRODUTOS")
-ENABLE_VALUE_VALIDATION: bool = os.getenv("ENABLE_VALUE_VALIDATION", "true").lower() == "true"
-
-# Generic Terms Blacklist (NEW - reject these even if fuzzy matching finds suggestions)
-# These are common query terms that should NEVER be treated as filter values
-GENERIC_TERMS_BLACKLIST = {
-    # Product-related generic terms (SIMPLE)
-    "PRODUTOS", "PRODUTO", "PRODUTORES", "PRODUTOR",
-    "produtos", "produto", "produtores", "produtor",
-
-    # Product-related generic terms (COMPOSITE - EXPANDED)
-    # These are generic category names that should NOT be used as filters
-    # They appear in the dataset but represent broad categories, not specific values
-    "PRODUTOS REVENDA", "produtos revenda",  # Too generic for Des_Linha_Produto
-    "PRODUTOS ACABADOS", "produtos acabados",
-    "PRODUTOS GERAIS", "produtos gerais",
-    "ITENS", "itens", "ITEM", "item",
-    "LINHAS", "linhas", "LINHA", "linha",
-    "CATEGORIAS", "categorias", "CATEGORIA", "categoria",
-    "GRUPOS", "grupos", "GRUPO", "grupo",
-    "FAMILIAS", "familias", "FAMILIA", "familia",
-
-    # Client-related generic terms
-    "CLIENTES", "CLIENTE", "CONSUMIDORES", "CONSUMIDOR",
-    "clientes", "cliente", "consumidores", "consumidor",
-    "COMPRADORES", "compradores", "COMPRADOR", "comprador",
-
-    # Sales-related generic terms
-    "VENDAS", "VENDA", "VENDEDORES", "VENDEDOR",
-    "vendas", "venda", "vendedores", "vendedor",
-    "PEDIDOS", "pedidos", "PEDIDO", "pedido",
-    "TRANSACOES", "transacoes", "TRANSACAO", "transacao",
-
-    # Location-related generic terms (less common but possible)
-    "CIDADES", "CIDADE", "ESTADOS", "ESTADO", "REGIOES", "REGIAO",
-    "cidades", "cidade", "estados", "estado", "regioes", "regiao",
-    "LOCALIDADES", "localidades", "LOCALIDADE", "localidade",
-    "MUNICIPIOS", "municipios", "MUNICIPIO", "municipio",
-
-    # Aggregation/Ranking terms that might be confused as values
-    "MAIORES", "maiores", "MAIOR", "maior",
-    "MENORES", "menores", "MENOR", "menor",
-    "MELHORES", "melhores", "MELHOR", "melhor",
-    "PIORES", "piores", "PIOR", "pior",
-    "PRINCIPAIS", "principais", "PRINCIPAL", "principal",
-    "TOP", "top",
-    "TODOS", "todos", "TODO", "todo",
-    "TODAS", "todas", "TODA", "toda",
-    "GERAL", "geral", "GERAIS", "gerais",
-}
-
-# Dataset Sampling (for categorical value validation)
-DATASET_SAMPLE_SIZE: Optional[int] = int(os.getenv("FILTER_DATASET_SAMPLE_SIZE", "1000"))
+# Note: Value validation is always active via ValueCatalog (Phase 3).
+# GENERIC_TERMS_BLACKLIST and DATASET_SAMPLE_SIZE were removed — replaced by
+# positive logic in PreMatchEngine (stopwords) and ValueCatalog (full catalog).
 
 # LLM Configuration (inherited from main settings, but can be overridden)
 # Gemini Migration: Try GEMINI_API_KEY first, fall back to OPENAI_API_KEY
@@ -125,9 +75,6 @@ def validate_settings() -> bool:
 
     if MIN_CONFIDENCE_THRESHOLD < 0 or MIN_CONFIDENCE_THRESHOLD > 1:
         raise ValueError(f"MIN_CONFIDENCE_THRESHOLD must be between 0 and 1, got: {MIN_CONFIDENCE_THRESHOLD}")
-
-    if DATASET_SAMPLE_SIZE is not None and DATASET_SAMPLE_SIZE < 1:
-        raise ValueError(f"DATASET_SAMPLE_SIZE must be positive or None, got: {DATASET_SAMPLE_SIZE}")
 
     if not Path(ALIAS_PATH).exists():
         raise FileNotFoundError(f"Alias file not found at: {ALIAS_PATH}")

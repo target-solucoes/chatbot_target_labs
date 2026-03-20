@@ -15,9 +15,6 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from src.filter_classifier.models.llm_loader import create_structured_llm
 from src.filter_classifier.core.settings import MIN_CONFIDENCE_THRESHOLD
 from src.filter_classifier.validation.semantic_validator import SemanticValidator
-from src.filter_classifier.validation.query_mention_validator import (
-    QueryMentionValidator,
-)
 from src.graphic_classifier.tools.alias_mapper import AliasMapper
 from src.shared_lib.data.dataset_column_extractor import DatasetColumnExtractor
 
@@ -63,6 +60,8 @@ class FilterParser:
         # Cache for dataset columns and categorical values
         self._dataset_columns: Optional[List[str]] = None
         self._categorical_values: Optional[Dict[str, List[Any]]] = None
+        # Cache for numeric/temporal column names (for semantic validation)
+        self._numeric_temporal_cols: Optional[set] = None
 
         logger.info("[FilterParser] Initialized successfully")
 
@@ -92,6 +91,22 @@ class FilterParser:
 
         logger.debug(f"[FilterParser] Loaded prompt template from {prompt_path}")
         return template
+
+    def _get_numeric_and_temporal_columns(self) -> set:
+        """Get column names classified as numeric or temporal in alias.yaml."""
+        if self._numeric_temporal_cols is not None:
+            return self._numeric_temporal_cols
+        try:
+            from src.shared_lib.core.config import get_column_types
+            col_types = get_column_types()
+            numeric = set(col_types.get("numeric", []))
+            temporal = set(col_types.get("temporal", []))
+            # Also include common derived temporal column names
+            derived = {"ano", "mes", "ano_mes", "trimestre", "semestre"}
+            self._numeric_temporal_cols = numeric | temporal | derived
+            return self._numeric_temporal_cols
+        except Exception:
+            return {"ano", "mes", "ano_mes", "periodo"}
 
     def _get_dataset_columns(self) -> List[str]:
         """
@@ -185,7 +200,10 @@ class FilterParser:
             return {}
 
     def _build_prompt(
-        self, query: str, current_filters: Optional[Dict[str, Any]] = None
+        self,
+        query: str,
+        current_filters: Optional[Dict[str, Any]] = None,
+        pre_match_candidates: str = "",
     ) -> str:
         """
         Build complete prompt by substituting placeholders.
@@ -193,6 +211,8 @@ class FilterParser:
         Args:
             query: User query to analyze.
             current_filters: Currently active filters (for CRUD classification).
+            pre_match_candidates: Pre-resolved candidates from PreMatchEngine
+                formatted as markdown table for LLM context.
 
         Returns:
             str: Complete prompt ready for LLM.
@@ -200,10 +220,6 @@ class FilterParser:
         # Get dynamic content
         dataset_columns = self._get_dataset_columns()
         column_aliases = self._get_column_aliases()
-        # REMOVED: categorical_values = self._get_categorical_values()
-        # REASON: Injecting real dataset values causes LLM to infer filters
-        # based on semantic association (e.g., "produto" -> "PRODUTOS REVENDA")
-        # Validation of values will be done AFTER detection, not DURING
         current_filters = current_filters or {}
 
         # Format placeholders
@@ -223,13 +239,13 @@ class FilterParser:
             else "No aliases configured"
         )
 
-        # REMOVED categorical_str injection - replaced with validation notice
+        # Categorical values section: replaced by PreMatchEngine candidates
         categorical_str = (
             "Valores categoricos serao validados APOS a deteccao.\n"
             "IMPORTANTE: Detecte APENAS valores EXPLICITAMENTE mencionados na query.\n"
             "NAO invente, sugira ou infira valores baseado em conhecimento geral.\n"
-            "Se o usuario menciona 'produto' (generico), NAO adicione nenhum filtro de produto.\n"
-            "Se o usuario menciona 'ADESIVOS' (especifico), detecte Des_Grupo_Produto = 'ADESIVOS'."
+            "Se o usuario menciona um termo generico (ex: 'produto'), NAO adicione filtro.\n"
+            "Se o usuario menciona um valor especifico (ex: 'Aerosol'), detecte o filtro."
         )
 
         current_filters_str = json.dumps(current_filters, indent=2, ensure_ascii=False)
@@ -239,12 +255,23 @@ class FilterParser:
         prompt = prompt.replace("{column_aliases}", aliases_str)
         prompt = prompt.replace("{categorical_values}", categorical_str)
         prompt = prompt.replace("{current_filters}", current_filters_str)
+
+        # Inject pre-match candidates before query section if available
+        if pre_match_candidates:
+            prompt = prompt.replace(
+                "{query}",
+                f"{pre_match_candidates}\n\n## Pergunta do Usuario\n\n{{query}}",
+            )
+
         prompt = prompt.replace("{query}", query)
 
         return prompt
 
     def parse_query(
-        self, query: str, current_filters: Optional[Dict[str, Any]] = None
+        self,
+        query: str,
+        current_filters: Optional[Dict[str, Any]] = None,
+        pre_match_candidates: str = "",
     ) -> Dict[str, Any]:
         """
         Parse user query to extract filters and identify CRUD operations.
@@ -285,8 +312,8 @@ class FilterParser:
         logger.info(f"[FilterParser] Parsing query: {query}")
 
         try:
-            # Build prompt with context
-            prompt = self._build_prompt(query, current_filters)
+            # Build prompt with context (including pre-match candidates if available)
+            prompt = self._build_prompt(query, current_filters, pre_match_candidates)
 
             # Invoke LLM
             messages = [HumanMessage(content=prompt)]
@@ -394,40 +421,37 @@ class FilterParser:
             Corrected response with semantically validated filters
         """
         detected_filters = response.get("detected_filters", {})
-        crud = response["crud_operations"]
 
-        # Step 1: Validar filtros detectados (remover numericos)
-        valid_filters, rejected_numeric = (
-            SemanticValidator.validate_non_quantitative_filters(detected_filters, query)
-        )
+        # Step 1: Detectar ranking terms e remover filtros pontuais se necessario
+        has_ranking, ranking_terms = SemanticValidator.detect_ranking_terms(query)
 
-        # Log filtros rejeitados por serem numericos
-        if rejected_numeric:
-            logger.warning(
-                f"[SemanticValidation] {len(rejected_numeric)} filtros numericos rejeitados: "
-                f"{list(rejected_numeric.keys())}"
-            )
-            for col, info in rejected_numeric.items():
-                logger.debug(f"  - {col}: {info['value']} (Razao: {info['reason']})")
+        # Step 2: Filtrar valores invalidos (None, vazios, numericos isolados)
+        valid_filters = {}
+        for col, filter_spec in detected_filters.items():
+            if isinstance(filter_spec, dict):
+                value = filter_spec.get("value")
+            else:
+                value = filter_spec
 
-        # Step 2: NOVA VALIDACAO - Verificar se valores foram MENCIONADOS na query
-        # Isso previne que o LLM infira valores baseado em associacao semantica
-        # Ex: "produto" -> "PRODUTOS REVENDA" (REJEITADO)
-        valid_filters, rejected_inferred = QueryMentionValidator.validate_filters(
-            valid_filters, query
-        )
+            # Reject None or empty values
+            if value is None or value == "" or value == []:
+                logger.debug(f"[SemanticValidation] Rejecting empty filter: {col}")
+                continue
+            # Reject numeric values ONLY for categorical columns
+            # Allow them for temporal/numeric columns (e.g., ano=2025, mes=6)
+            if isinstance(value, (int, float)):
+                allowed_numeric_cols = self._get_numeric_and_temporal_columns()
+                if col not in allowed_numeric_cols:
+                    logger.debug(f"[SemanticValidation] Rejecting numeric filter: {col}={value}")
+                    continue
+                else:
+                    logger.debug(f"[SemanticValidation] Accepting numeric filter for temporal/numeric column: {col}={value}")
 
-        # Log filtros rejeitados por inferencia indevida
-        if rejected_inferred:
-            logger.warning(
-                f"[QueryMentionValidation] {len(rejected_inferred)} filtros inferidos rejeitados: "
-                f"{list(rejected_inferred.keys())}"
-            )
-            for col, info in rejected_inferred.items():
-                logger.warning(
-                    f"  - {col}: '{info['value']}' nao mencionado em query '{info['query']}' "
-                    f"(Razao: {info['reason']})"
-                )
+            valid_filters[col] = filter_spec
+
+        if len(valid_filters) < len(detected_filters):
+            rejected_count = len(detected_filters) - len(valid_filters)
+            logger.info(f"[SemanticValidation] {rejected_count} invalid filters removed")
 
         # Step 3: Atualizar detected_filters apenas com filtros validos
         response["detected_filters"] = valid_filters
@@ -437,7 +461,6 @@ class FilterParser:
             valid_filters, current_filters, query
         )
 
-        # Update response
         response["crud_operations"] = corrected_crud
         logger.info(
             f"[SemanticValidation] CRUD operations: "

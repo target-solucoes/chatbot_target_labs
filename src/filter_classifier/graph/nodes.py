@@ -17,8 +17,6 @@ from src.filter_classifier.utils.filter_formatter import FilterFormatter
 from src.filter_classifier.core.settings import (
     ALIAS_PATH,
     DATASET_PATH,
-    ENABLE_VALUE_VALIDATION,
-    GENERIC_TERMS_BLACKLIST,
 )
 from src.graphic_classifier.tools.alias_mapper import AliasMapper
 
@@ -159,14 +157,33 @@ def parse_filter_query(state: FilterGraphState) -> FilterGraphState:
                 "metadata": resolution_result.metadata,
             }
 
+        # [NOVO] Etapa 0.5: Pre-match values against ValueCatalog (before LLM)
+        from src.filter_classifier.tools.pre_match_engine import PreMatchEngine
+
+        pre_match_engine = PreMatchEngine()
+        pre_match_candidates = pre_match_engine.find_candidates(query)
+        candidates_prompt = pre_match_engine.format_candidates_for_prompt(
+            pre_match_candidates
+        )
+
+        if pre_match_candidates:
+            logger.info(
+                f"[parse_filter_query] PreMatchEngine found {len(pre_match_candidates)} "
+                f"candidates: {[(c.column, c.value, c.score) for c in pre_match_candidates]}"
+            )
+        else:
+            logger.info("[parse_filter_query] PreMatchEngine found no candidates")
+
         # Import token tracker
         from src.shared_lib.utils.token_tracker import extract_token_usage
 
         # Get FilterParser instance
         parser = _get_filter_parser()
 
-        # [EXISTENTE] Etapa 1: Parse query usando LLM
-        parse_result = parser.parse_query(query, current_filters)
+        # [EXISTENTE] Etapa 1: Parse query usando LLM (now with pre-match candidates)
+        parse_result = parser.parse_query(
+            query, current_filters, pre_match_candidates=candidates_prompt
+        )
 
         # Capture tokens if LLM response is available
         if "_llm_response" in parse_result:
@@ -186,6 +203,26 @@ def parse_filter_query(state: FilterGraphState) -> FilterGraphState:
 
         # Extract detected filters
         detected_filters = parse_result.get("detected_filters", {})
+
+        # [FALLBACK] Inject high-confidence PreMatch candidates that LLM missed.
+        # Per filter_enhanced_plan.md: PreMatchEngine is deterministic and reliable;
+        # the LLM is confirmatory. If PreMatch found something strong, trust it.
+        PREMATCH_FALLBACK_SCORE = 110
+        if pre_match_candidates:
+            for candidate in pre_match_candidates:
+                col = candidate.column
+                if col not in detected_filters and candidate.score >= PREMATCH_FALLBACK_SCORE:
+                    detected_filters[col] = {
+                        "column": col,
+                        "value": candidate.value,
+                        "operator": "=",
+                        "confidence": min(candidate.score / 135.0, 1.0),
+                        "source": "pre_match_fallback",
+                    }
+                    logger.info(
+                        f"[parse_filter_query] Fallback: injected {col}={candidate.value} "
+                        f"(score={candidate.score}, LLM missed)"
+                    )
 
         # Filter out invalid filters (None values or empty)
         valid_filters = {}
@@ -224,6 +261,7 @@ def parse_filter_query(state: FilterGraphState) -> FilterGraphState:
             "detected_filter_columns": detected_columns,
             "filter_confidence": confidence,
             "parsed_entities": valid_filters,  # Store only valid filter specs
+            "pre_match_candidates": [c.to_dict() for c in pre_match_candidates] if pre_match_candidates else [],
             "filter_operations": {
                 "ADICIONAR": detected_columns if "ADICIONAR" in crud_operations else [],
                 "ALTERAR": crud_operations.get("ALTERAR", []),
@@ -247,26 +285,17 @@ def parse_filter_query(state: FilterGraphState) -> FilterGraphState:
 
 def validate_detected_values(state: FilterGraphState) -> FilterGraphState:
     """
-    Node (NEW): Validate that detected filter values actually exist in the dataset.
+    Node: Validate detected filter values against ValueCatalog.
 
-    This node runs AFTER parse_filter_query to ensure values detected by the LLM
-    are valid. It prevents false detections like "PRODUTOS" in Des_Linha_Produto.
-
-    Uses FilterValidator to:
-    - Check if detected values exist in their respective columns
-    - Provide fuzzy-matched suggestions for typos
-    - Generate warnings for invalid values
+    Uses positive logic: only accepts values that exist in the pre-computed
+    catalog. This replaces the old GENERIC_TERMS_BLACKLIST approach.
 
     Args:
         state: Current filter graph state
 
     Returns:
-        Updated state with validated parsed_entities and validation_warnings
+        Updated state with validated parsed_entities
     """
-    if not ENABLE_VALUE_VALIDATION:
-        logger.debug("[validate_detected_values] Validation disabled via settings")
-        return state
-
     parsed_entities = state.get("parsed_entities", {})
 
     if not parsed_entities:
@@ -279,10 +308,8 @@ def validate_detected_values(state: FilterGraphState) -> FilterGraphState:
 
     try:
         validator = _get_filter_validator()
-
         validated_entities = {}
         warnings = []
-        suggestions_map = {}
 
         for column, filter_spec in parsed_entities.items():
             value = filter_spec.get("value")
@@ -290,91 +317,56 @@ def validate_detected_values(state: FilterGraphState) -> FilterGraphState:
             # Skip validation for complex operators or None values
             if value is None or isinstance(value, dict):
                 validated_entities[column] = filter_spec
-                logger.debug(
-                    f"[validate_detected_values] Skipping validation for {column} (complex type)"
-                )
                 continue
 
             # Validate single value or list of values
             values_to_check = value if isinstance(value, list) else [value]
-            all_valid = True
-            invalid_values = []
+            valid_values = []
+            has_any_valid = False
 
             for val in values_to_check:
-                # CRITICAL: Check if value is a generic term (blacklist)
-                if str(val).strip() in GENERIC_TERMS_BLACKLIST:
-                    all_valid = False
-                    invalid_values.append(val)
-                    logger.warning(
-                        f"[validate_detected_values] Rejecting generic term '{val}' "
-                        f"in column '{column}' (blacklisted)"
-                    )
-                    warnings.append(
-                        f"Termo genérico '{val}' rejeitado - não é um valor específico"
-                    )
-                    continue  # Skip fuzzy matching for blacklisted terms
+                is_valid = validator.validate_value_exists(column, val)
 
-                # Use the new validate_value_exists method with cache
-                is_valid = validator.validate_value_exists(column, val, use_cache=True)
-
-                if not is_valid:
-                    all_valid = False
-                    invalid_values.append(val)
-                    logger.warning(
-                        f"[validate_detected_values] Invalid value '{val}' "
-                        f"in column '{column}'"
+                if is_valid:
+                    valid_values.append(val)
+                    has_any_valid = True
+                else:
+                    # Try fuzzy suggestions (typo tolerance)
+                    suggestions = validator.suggest_valid_values(
+                        column, str(val), max_suggestions=1, score_cutoff=70.0
                     )
-
-                    # Try to suggest valid values using fuzzy matching
-                    try:
-                        suggestions = validator.suggest_valid_values(
-                            column, str(val), max_suggestions=3, score_cutoff=60.0
+                    if suggestions:
+                        # Auto-correct to best suggestion
+                        corrected = suggestions[0]
+                        valid_values.append(corrected)
+                        has_any_valid = True
+                        warnings.append(
+                            f"Valor '{val}' corrigido para '{corrected}' em '{column}'"
                         )
-                        if suggestions:
-                            suggestions_map[f"{column}:{val}"] = suggestions
-                            warnings.append(
-                                f"Valor '{val}' não encontrado em '{column}'. "
-                                f"Sugestões: {', '.join(suggestions[:3])}"
-                            )
-                        else:
-                            warnings.append(
-                                f"Valor '{val}' não encontrado em '{column}'"
-                            )
-                    except Exception as e:
-                        logger.error(
-                            f"[validate_detected_values] Error suggesting values: {e}"
+                        logger.info(
+                            f"[validate_detected_values] Auto-corrected '{val}' -> "
+                            f"'{corrected}' in column '{column}'"
                         )
-                        warnings.append(f"Valor '{val}' não encontrado em '{column}'")
+                    else:
+                        warnings.append(
+                            f"Valor '{val}' nao encontrado em '{column}'"
+                        )
+                        logger.warning(
+                            f"[validate_detected_values] Rejected '{val}' "
+                            f"in column '{column}' (not in ValueCatalog)"
+                        )
 
-            # Check if ANY invalid value is a generic term (blacklisted)
-            has_generic_terms = any(
-                str(v).strip() in GENERIC_TERMS_BLACKLIST for v in invalid_values
-            )
-
-            # Only include filter if at least one value is valid
-            # OR if we have good suggestions (tolerance for typos) BUT NOT generic terms
-            if all_valid:
+            if has_any_valid:
+                # Update filter with validated/corrected values
+                if isinstance(value, list):
+                    filter_spec["value"] = valid_values
+                elif valid_values:
+                    filter_spec["value"] = valid_values[0]
                 validated_entities[column] = filter_spec
                 logger.debug(
-                    f"[validate_detected_values] ✓ {column} validated successfully"
-                )
-            elif has_generic_terms:
-                # REJECT filter if it contains generic terms, even with suggestions
-                logger.warning(
-                    f"[validate_detected_values] ✗ Removing {column} "
-                    f"(contains generic term: {[v for v in invalid_values if str(v).strip() in GENERIC_TERMS_BLACKLIST]})"
-                )
-            elif invalid_values and any(
-                f"{column}:{v}" in suggestions_map for v in invalid_values
-            ):
-                # Has suggestions (typo tolerance) - keep but warn
-                validated_entities[column] = filter_spec
-                logger.info(
-                    f"[validate_detected_values] ⚠ {column} has invalid values "
-                    f"but suggestions available (likely typo)"
+                    f"[validate_detected_values] ✓ {column} validated"
                 )
             else:
-                # No valid values and no good suggestions - skip filter
                 logger.warning(
                     f"[validate_detected_values] ✗ Removing {column} "
                     f"(no valid values found)"
@@ -386,18 +378,15 @@ def validate_detected_values(state: FilterGraphState) -> FilterGraphState:
             f"{len(warnings)} warnings"
         )
 
-        # Update state
         return {
             **state,
             "parsed_entities": validated_entities,
             "detected_filter_columns": list(validated_entities.keys()),
             "validation_warnings": warnings,
-            "value_suggestions": suggestions_map,
         }
 
     except Exception as e:
         logger.error(f"[validate_detected_values] Error during validation: {str(e)}")
-        # On error, pass through without validation
         return {
             **state,
             "validation_warnings": [f"Validation error: {str(e)}"],

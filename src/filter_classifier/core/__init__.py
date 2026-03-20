@@ -5,7 +5,6 @@ from src.filter_classifier.core.settings import (
     SESSION_TIMEOUT_MINUTES,
     FUZZY_THRESHOLD,
     MIN_CONFIDENCE_THRESHOLD,
-    DATASET_SAMPLE_SIZE,
     validate_settings
 )
 
@@ -14,6 +13,5 @@ __all__ = [
     "SESSION_TIMEOUT_MINUTES",
     "FUZZY_THRESHOLD",
     "MIN_CONFIDENCE_THRESHOLD",
-    "DATASET_SAMPLE_SIZE",
     "validate_settings",
 ]
