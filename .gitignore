@@ -36,7 +36,7 @@ env/
 .playwright-mcp/
 
 # Data Paths
-data/datasets/*
+data/datasets/checking.py
 data/output_examples/*
 !.gitkeep
 
