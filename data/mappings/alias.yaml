@@ -4,1004 +4,245 @@
 # Esta secao classifica as colunas do dataset por tipo para facilitar
 # a selecao automatica de funcoes de agregacao pelos agentes.
 #
-# Dataset: Cubo Sell-Out Chatbot (Baruel / IQVIA)
-# Contexto: Dados de sell-out (vendas ao consumidor) de produtos pedicos
-#           no canal Farma, incluindo marcas Baruel e concorrencia.
-#
 # - numeric: Colunas quantitativas que devem usar SUM() como agregacao padrao
 # - categorical: Colunas qualitativas que devem usar COUNT() ou COUNT DISTINCT
+# - temporal: Colunas de data/tempo que devem usar COUNT() para agregacao
 # ============================================================================
 column_types:
   numeric:
-    - unidade
-    - valor
-    - ano_mes
-    - ean
-    - ano
-    - mes
-
-  temporal:
-    - periodo
-    - data_lancamento
+    - Valor_Vendido
+    - Peso_Vendido
+    - Qtd_Vendida
 
   categorical:
-    - canal
-    - uf
-    - catalog
-    - uf_montada
-    - regiao
-    - macro_regiao
-    - descricao
-    - fabricante
-    - marca
-    - categoria
-    - categoria_com_range
-    - subcategoria
-    - gramatura
-    - regular_promo_refil
-    - mercado
-    - baruel_concorrencia
-    - range_gramatura
-    - marca_montada
-    - fragrancia
-    - publico
-    - tipo
-    - beneficio
-    - rotina
-    - lancamento
-    - canal_macro
-    - canal_interno
+    - Empresa
+    - Cod_Familia_Produto
+    - Cod_Grupo_Produto
+    - Cod_Linha_Produto
+    - Cod_Vendedor
+    - Cod_Regiao_Vendedor
+    - Cod_Cliente
+    - UF_Cliente
+    - Municipio_Cliente
+    - Cod_Segmento_Cliente
+    - Des_Familia_Produto
+    - Des_Grupo_Produto
+    - Des_Linha_Produto
+    - Des_Regiao_Vendedor
+    - Des_Segmento_Cliente
 
-# ============================================================================
-# PRIORIZACAO DE METRICAS
-# ============================================================================
-# Esta secao define qual metrica priorizar em contextos ambiguos.
-# Escalavel: cada dataset define suas prioridades sem hardcode.
-#
-# - default_metric: Metrica padrao para queries genericas (ex: "top marcas")
-#     Usada quando nenhum keyword especifico e detectado.
-#
-# - aggregation_metric: Metrica preferida para agregacoes SUM/ranking
-#     (ex: "top marcas em vendas", "faturamento por regiao")
-#     Representa o valor acumulado real, ideal para SUM e rankings.
-#
-# Logica de priorizacao no MetricDetector:
-# 1. Se ha keyword match direto no alias.yaml -> usa o match
-# 2. Se ha ambiguidade entre metricas -> prioriza aggregation_metric
-# 3. Se nenhum match -> usa default_metric
-# 4. Ultimo fallback -> primeira coluna numerica
-# ============================================================================
-metric_priority:
-  default_metric: valor
-  aggregation_metric: valor
+  temporal:
+    - Data
 
-
-# ============================================================================
-# MAPEAMENTO TEMPORAL
-# ============================================================================
-temporal_mapping:
-  primary_column: periodo
-  derived_columns:
-    ano: year
-    mes: month
-    ano_mes: year_month
 
 # ============================================================================
 # MAPEAMENTO DE ALIASES (ESTRUTURA ORIGINAL)
 # ============================================================================
 columns:
-  # --------------------------------------------------------------------------
-  # METRICAS / COLUNAS NUMERICAS
-  # --------------------------------------------------------------------------
-  valor:
-    - "vendas"
-    - "venda"
-    - "faturamento"
-    - "receita"
-    - "valor"
-    - "valor vendido"
-    - "valor de venda"
-    - "valor de vendas"
-    - "sell out"
-    - "sell-out"
-    - "sellout"
-    - "sell out em reais"
-    - "sell out reais"
-    - "sellout reais"
-    - "sell-out reais"
-    - "sell out r$"
-    - "sell out valor"
-    - "sellout valor"
-    - "sell out em valor"
-    - "sell-out em valor"
-    - "sellout em valor"
-    - "sell out em unidades"
-    - "sell-out em unidades"
-    - "sellout em unidades"
-    - "receita de vendas"
-    - "valor total"
-    - "total vendido"
-    - "total de vendas"
-    - "valor faturado"
-    - "montante"
-    - "revenue"
-    - "sales"
-
-  unidade:
-    - "unidades"
-    - "unidades vendidas"
-    - "quantidade vendida"
-    - "volume"
-    - "volume vendido"
-    - "volume de vendas"
-    - "qtd vendida"
-    - "quantidade"
-    - "sell out unidades"
-    - "sell out unidade"
-    - "sellout unidades"
-    - "sell-out unidades"
-    - "pecas"
-    - "pecas vendidas"
-    - "itens vendidos"
-    - "total de unidades"
-    - "qtd"
-    - "units"
-
-  # --------------------------------------------------------------------------
-  # DIMENSOES TEMPORAIS
-  # --------------------------------------------------------------------------
-  ano:
-    - "ano"
-    - "anos"
-    - "year"
-    - "periodo anual"
-    - "ano de referencia"
-    - "exercicio"
-
-  mes:
+  Empresa:
+    - "Nome da empresa"
+    - "Empresa"
+    - "companhia"
+  Mes:
+    - "mês"
     - "mes"
-    - "meses"
-    - "month"
-    - "periodo mensal"
-    - "mes de referencia"
-
-  periodo:
+    - "mensal"
+    - "mensalmente"
+    - "por mês"
+    - "por mes"
+    - "histórico"
+    - "historico"
+    - "evolução"
+    - "evolucao"
+    - "tendência"
+    - "tendencia"
+    - "ao longo do tempo"
+    - "série temporal"
+    - "serie temporal"
+    - "progressão"
+    - "progressao"
+    - "mês a mês"
+    - "mes a mes"
+    - "comportamento"
+  Ano:
+    - "ano"
+    - "anual"
+    - "anualmente"
+    - "por ano"
+    - "ano a ano"
+  Data:
+    - "Data em que o pedido foi emitido"
+    - "Data de emissão"
+    - "Data do pedido"
+    - "Data da compra"
+    - "quando foi emitido"
+    - "data"
+    - "quando"
+    - "período"
     - "periodo"
-    - "mes e ano"
-    - "mes/ano"
-    - "competencia"
-    - "referencia"
-    - "periodo de referencia"
-    - "mes ano"
-    - "data de referencia"
-    - "data referencia"
-
-  ano_mes:
-    - "ano mes"
-    - "anomes"
-    - "ano-mes"
-    - "periodo yyyymm"
-    - "periodo numerico"
-
-  data_lancamento:
-    - "data de lancamento"
-    - "data lancamento"
-    - "quando lancou"
-    - "lancado em"
-    - "data do lancamento"
-
-  # --------------------------------------------------------------------------
-  # DIMENSOES GEOGRAFICAS
-  # --------------------------------------------------------------------------
-  uf:
+  Cod_Linha_Produto:
+    - "Código identificador do produto"
+    - "Código do produto"
+    - "ID do produto"
+  Des_Linha_Produto:
+    - "Produto"
+    - "produtos"
+    - "Identificador do item"
+    - "Código da linha do produto"
+    - "Linha do produto"
+    - "código da linha"
+    - "tipo de linha"
+    - "descrição do produto"
+    - "nome do produto"
+  Cod_Familia_Produto:
+    - "Código da família do produto"
+    - "Código da família"
+    - "ID da família"
+  Des_Familia_Produto:
+    - "Família do produto"
+    - "família"
+    - "categoria do produto"
+    - "categoria"
+  Cod_Grupo_Produto:
+    - "Código do grupo do produto"
+    - "Código do grupo"
+    - "ID do grupo"
+  Des_Grupo_Produto:
+    - "Grupo do produto"
+    - "grupo"
+    - "grupo comercial"
+  Peso_Unitario:
+    - "Peso por unidade do produto"
+    - "Peso por unidade"
+    - "peso unitário"
+    - "peso de cada item"
+    - "peso individual"
+  Cod_Vendedor:
+    - "Representante"
+    - "Representantes"
+    - "Código identificador do vendedor"
+    - "Código do vendedor"
+    - "vendedor"
+    - "vendedores"
+    - "id do vendedor"
+    - "quem vendeu"
+  Cod_Regiao_Vendedor:
+    - "Código da região de atuação do vendedor"
+    - "Região do vendedor"
+    - "região de atuação"
+    - "regioes"
+    - "área do vendedor"
+    - "UF vendedor"
+  Cod_Cliente:
+    - "Identificador do cliente"
+    - "Código do cliente"
+    - "cliente"
+    - "clientes"
+    - "ID cliente"
+    - "comprador"
+  UF_Cliente:
+    - "Estado (UF) do cliente"
+    - "UF do cliente"
+    - "Estado do cliente"
     - "estado"
     - "estados"
-    - "uf"
-    - "unidade federativa"
-    - "sigla do estado"
-    - "sigla estado"
-
-  uf_montada:
-    - "uf montada"
-    - "uf agrupada"
-    - "estado agrupado"
-    - "estados agrupados"
-    - "uf consolidada"
-    - "grupo de estados"
-    - "grupo de uf"
-
-  regiao:
-    - "regiao"
-    - "regioes"
-    - "regiao geografica"
-    - "regiao do brasil"
-    - "region"
-
-  macro_regiao:
-    - "macro regiao"
-    - "macrorregiao"
-    - "macro"
-    - "neno"
-    - "sseco"
-    - "regiao baruel"
-    - "regiao macro"
-
-  # --------------------------------------------------------------------------
-  # DIMENSOES DE CANAL
-  # --------------------------------------------------------------------------
-  canal:
-    - "canal"
-    - "canais"
-    - "canal de venda"
-    - "canal de vendas"
-    - "canal farma"
-    - "tipo de canal"
-    - "channel"
-
-  canal_interno:
-    - "canal interno"
-    - "canal baruel"
-    - "nomenclatura interna"
-    - "nome do canal"
-    - "canal detalhado"
-
-  canal_macro:
-    - "canal macro"
-    - "macro canal"
-    - "canal principal"
-    - "segmento de canal"
-
-  # --------------------------------------------------------------------------
-  # DIMENSOES DE PRODUTO - IDENTIFICACAO
-  # --------------------------------------------------------------------------
-  ean:
-    - "ean"
-    - "codigo de barras"
-    - "codigo ean"
-    - "barcode"
-    - "gtin"
-    - "codigo do produto"
-    - "sku"
-    - "codigo sku"
-
-  descricao:
-    - "descricao"
-    - "descricao do produto"
-    - "nome do produto"
-    - "produto"
-    - "produtos"
-    - "item"
+    - "UF"
+  Municipio_Cliente:
+    - "Cidade do cliente"
+    - "município"
+    - "municipios"
+    - "localidade"
+    - "cidade"
+    - "onde mora o cliente"
+  Cod_Segmento_Cliente:
+    - "Código do segmento ou setor do cliente"
+    - "Segmento do cliente"
+    - "setor"
+    - "tipo de cliente"
+    - "categoria de cliente"
+  Valor_Vendido:
+    - "Valor monetário total da venda"
+    - "Valor vendido"
+    - "faturamento"
+    - "valor total"
+    - "valor da venda"
+    - "receita"
+    - "vendas"
+    - "venda"
+    - "total de vendas"
+    - "valor de vendas"
+  Peso_Vendido:
+    - "Peso total vendido"
+    - "peso total"
+    - "peso das vendas"
+    - "peso entregue"
+  Qtd_Vendida:
+    - "Quantidade de itens vendidos"
+    - "Quantidade vendida"
+    - "quantidade"
+    - "qtd"
+    - "itens vendidos"
+    - "volume vendido"
+    - "quantidade de itens vendidos"
     - "itens"
-    - "product"
-    - "descritivo"
 
-  # --------------------------------------------------------------------------
-  # DIMENSOES DE PRODUTO - MARCA E FABRICANTE
-  # --------------------------------------------------------------------------
-  fabricante:
-    - "fabricante"
-    - "fabricantes"
-    - "empresa"
-    - "empresa fabricante"
-    - "quem fabrica"
-    - "manufacturer"
-    - "industria"
-    - "laboratorio"
-
-  marca:
-    - "marca"
-    - "marcas"
-    - "brand"
-    - "marca do produto"
-    - "nome da marca"
-    - "marca comercial"
-
-  marca_montada:
-    - "marca montada"
-    - "marca padronizada"
-    - "marca agrupada"
-    - "marca consolidada"
-    - "marca e fabricante"
-
-  baruel_concorrencia:
-    - "baruel"
-    - "baruel ou concorrencia"
-    - "baruel concorrencia"
-    - "baruel vs concorrencia"
-    - "concorrencia"
-    - "concorrente"
-    - "concorrentes"
-    - "fabricante baruel"
-    - "e baruel"
-    - "da baruel"
-    - "proprio ou concorrente"
-    - "vs concorrencia"
-
-  # --------------------------------------------------------------------------
-  # DIMENSOES DE PRODUTO - CLASSIFICACAO
-  # --------------------------------------------------------------------------
-  mercado:
-    - "mercado"
-    - "mercado de pedicos"
-    - "pedicos"
-    - "segmento de mercado"
-    - "segmento"
-    - "market"
-
-  categoria:
-    - "categoria"
-    - "categorias"
-    - "category"
-    - "linha de produto"
-    - "linha"
-
-  subcategoria:
-    - "subcategoria"
-    - "subcategorias"
-    - "sub categoria"
-    - "sub-categoria"
-    - "tipo de apresentacao"
-    - "apresentacao"
-    - "formato"
-    - "formato do produto"
-    - "aerosol"
-    - "spray"
-    - "po"
-    - "creme"
-    - "talco"
-
-  categoria_com_range:
-    - "categoria com range"
-    - "categoria com gramatura"
-    - "categoria e faixa"
-    - "categoria e range"
-    - "segmento por gramatura"
-
-  # --------------------------------------------------------------------------
-  # DIMENSOES DE PRODUTO - ATRIBUTOS
-  # --------------------------------------------------------------------------
-  gramatura:
-    - "gramatura"
-    - "peso"
-    - "tamanho"
-    - "ml"
-    - "gramas"
-    - "conteudo"
-    - "capacidade"
-    - "peso do produto"
-    - "tamanho do produto"
-
-  range_gramatura:
-    - "range de gramatura"
-    - "faixa de gramatura"
-    - "faixa de peso"
-    - "faixa de volume"
-    - "range de peso"
-
-  fragrancia:
-    - "fragrancia"
-    - "fragrancias"
-    - "aroma"
-    - "perfume"
-    - "cheiro"
-    - "essencia"
-    - "fragrance"
-    - "tipo de fragrancia"
-
-  publico:
-    - "publico"
-    - "publico alvo"
-    - "publico-alvo"
-    - "genero"
-    - "sexo"
-    - "masculino feminino"
-    - "para quem"
-    - "target"
-    - "audiencia"
-
-  tipo:
-    - "tipo"
-    - "tipo de produto"
-    - "tipo do produto"
-    - "formato de aplicacao"
-    - "forma"
-
-  beneficio:
-    - "beneficio"
-    - "beneficios"
-    - "propriedade"
-    - "funcao do produto"
-
-  rotina:
-    - "rotina"
-    - "rotina de uso"
-    - "momento de uso"
-    - "ocasiao de uso"
-
-  # --------------------------------------------------------------------------
-  # DIMENSOES COMERCIAIS
-  # --------------------------------------------------------------------------
-  regular_promo_refil:
-    - "regular promo refil"
-    - "tipo de operacao"
-    - "tipo operacao"
-    - "promocional"
-    - "promo"
-    - "promocao"
-    - "regular ou promo"
-    - "e promocao"
-    - "refil"
-    - "regular"
-    - "tipo de venda"
-
-  lancamento:
-    - "lancamento"
-    - "lancamentos"
-    - "produto novo"
-    - "novidade"
-    - "novo"
-    - "e lancamento"
-    - "produto lancado"
-
-  # --------------------------------------------------------------------------
-  # METADADOS (uso interno)
-  # --------------------------------------------------------------------------
-  catalog:
-    - "catalogo"
-    - "fonte de dados"
-    - "origem dos dados"
-    - "catalog"
-
-
-# ============================================================================
-# METRICAS COMPUTADAS
-# ============================================================================
 metrics:
-  Numero de Produtos:
+  Numero de Compras:
     - "Quantidade de linhas do dataset"
-    - "numero de produtos"
-    - "quantidade de produtos"
-    - "total de produtos"
+    - "Número de pedidos"
+    - "número de compras"
     - "quantidade de registros"
-    - "numero de registros"
-    - "total de registros"
-    - "contagem de itens"
-    - "quantos produtos"
+    - "quantidade de vendas"
+    - "total de pedidos"
 
-  Market Share:
-    - "market share"
-    - "participacao de mercado"
-    - "share"
-    - "fatia de mercado"
-    - "percentual de mercado"
-    - "ms"
-    - "ms%"
-    - "participacao"
-
-
-# ============================================================================
-# AGRUPAMENTO POR CATEGORIAS SEMANTICAS
-# ============================================================================
 categories:
   temporal:
-    - "ano"
-    - "mes"
-    - "periodo"
-    - "ano_mes"
-  geografico:
-    - "uf"
-    - "uf_montada"
-    - "regiao"
-    - "macro_regiao"
-  canal_vendas:
-    - "canal"
-    - "canal_interno"
-    - "canal_macro"
-  identificacao_produto:
-    - "ean"
-    - "descricao"
-  marca_fabricante:
-    - "fabricante"
-    - "marca"
-    - "marca_montada"
-    - "baruel_concorrencia"
-  classificacao_produto:
-    - "mercado"
-    - "categoria"
-    - "subcategoria"
-    - "categoria_com_range"
-  atributos_produto:
-    - "gramatura"
-    - "range_gramatura"
-    - "fragrancia"
-    - "publico"
-    - "tipo"
-    - "beneficio"
-    - "rotina"
-  comercial:
-    - "regular_promo_refil"
-    - "lancamento"
-    - "data_lancamento"
-  metricas:
-    - "unidade"
-    - "valor"
-  metadados:
-    - "catalog"
+    - "Data"
+  produto:
+    - "Des_Linha_Produto"
+    - "Cod_Familia_Produto"
+    - "Cod_Grupo_Produto"
+    - "Cod_Linha_Produto"
+    - "Peso_Unitario"
+  vendas:
+    - "Valor_Vendido"
+    - "Peso_Vendido"
+    - "Qtd_Vendida"
+  cliente:
+    - "Cod_Cliente"
+    - "UF_Cliente"
+    - "Municipio_Cliente"
+    - "Cod_Segmento_Cliente"
+  vendedor:
+    - "Cod_Vendedor"
+    - "Cod_Regiao_Vendedor"
 
-
-# ============================================================================
-# CONVENCOES DE EXIBICAO DE VALORES
-# ============================================================================
-# Mapeamento de valores do dataset para rótulos amigáveis de exibição.
-# Cobre todas as colunas de baixa e média cardinalidade.
-# ============================================================================
 conventions:
-  # --- Metricas ---
-  Numero de Produtos: "Quantidade de linhas do dataset"
-  # --- Lancamento ---
-  SIM: "Sim"
-  NAO: "Nao"
-  # --- Regular/Promo ---
-  REGULAR: "Regular"
-  PROMO: "Promocional"
-  # --- Baruel/Concorrencia ---
-  Baruel: "Baruel"
-  Concorrencia: "Concorrencia"
-  # --- Publico ---
-  Feminino: "Feminino"
-  Masculino: "Masculino"
-  Kids: "Kids / Infantil"
-  Nao especificado: "Nao especificado"
-  # --- Canal ---
-  Canal Redes: "Canal Redes"
-  Canal Indep/Assoc/Franq: "Canal Independente/Associado/Franqueado"
-  # --- Canal Interno ---
-  FARMA REDES/TOP: "Farma Redes/Top"
-  DIST. FARMA/ATACADO FARMA: "Distribuidora Farma/Atacado Farma"
-  # --- Canal Macro ---
-  FARMA: "Farma"
-  # --- Macro Regiao ---
-  NENO: "Norte/Nordeste (NENO)"
-  SSECO: "Sul/Sudeste/Centro-Oeste (SSECO)"
-  # --- Regiao ---
-  SUDESTE: "Sudeste"
-  SUL: "Sul"
-  NORDESTE: "Nordeste"
-  NORTE: "Norte"
-  CENTRO OESTE: "Centro-Oeste"
-  # --- Categoria ---
-  COSMETICOS: "Cosmeticos"
-  DESODORANTE: "Desodorante"
-  INCOMODOS: "Incomodos"
-  # --- Mercado ---
-  PEDICOS: "Pedicos"
-  # --- Subcategoria ---
-  AEROSOL: "Aerosol"
-  CALCANHARES: "Calcanhares"
-  CALCANHARES DANIFICADOS: "Calcanhares Danificados"
-  CALOS: "Calos"
-  CREME: "Creme"
-  CURATIVO: "Curativo"
-  ESFOLIANTE: "Esfoliante"
-  GEL PEDICO: "Gel Pedico"
-  JOANETE: "Joanete"
-  PELE SECA: "Pele Seca"
-  PERNAS CANSADAS: "Pernas Cansadas"
-  PLANTAR: "Plantar"
-  PO: "Po"
-  # --- Tipo ---
-  Air system: "Air System"
-  Almofada: "Almofada"
-  Balsamo: "Balsamo"
-  Borracha: "Borracha"
-  Calcanhares: "Calcanhares"
-  Creme: "Creme"
-  Emulsao: "Emulsao"
-  Entre dedos: "Entre Dedos"
-  Esporte: "Esporte"
-  Gel: "Gel"
-  Hidrocoloide: "Hidrocoloide"
-  Locao: "Locao"
-  Manteiga: "Manteiga"
-  Oleo: "Oleo"
-  Pack: "Pack"
-  Pes: "Pes"
-  Po / Talco / Polvilho: "Po / Talco / Polvilho"
-  Silicone: "Silicone"
-  Spray: "Spray"
-  Tendao: "Tendao"
-  Terapeutica: "Terapeutica"
-  Tubo: "Tubo"
-  com abas: "Com Abas"
-  # --- Beneficio ---
-  Antisseptico: "Antisseptico"
-  # --- Range Gramatura ---
-  0-100: "0 a 100"
-  0-153: "0 a 153"
-  101+: "101+"
-  153+: "153+"
-
-
-# ============================================================================
-# HINTS DE FILTRO PARA HEURISTICAS DO QUERY ANALYZER
-# ============================================================================
-# Esta secao permite configurar:
-# - valid_years: anos validos presentes no dataset
-# - known_entities: UFs e cidades presentes no dataset
-# - important_values: valores de TODAS as colunas de baixa/media cardinalidade
-#   Usados pelo PreMatchEngine para scoring e pelo LLM como grounding
-# ============================================================================
-filter_hints:
-  valid_years: [2023, 2024, 2025, 2026]
-  known_entities:
-    states:
-      - "AC"
-      - "AL"
-      - "AM"
-      - "AP"
-      - "BA"
-      - "CE"
-      - "DF"
-      - "ES"
-      - "GO"
-      - "MA"
-      - "MG"
-      - "MS"
-      - "MT"
-      - "PA"
-      - "PB"
-      - "PE"
-      - "PI"
-      - "PR"
-      - "RJ"
-      - "RN"
-      - "RO"
-      - "RR"
-      - "RS"
-      - "SC"
-      - "SE"
-      - "SP"
-      - "TO"
-    cities: []
-
-  # -----------------------------------------------------------------------
-  # IMPORTANT VALUES — Todos valores de colunas de baixa/media cardinalidade
-  # -----------------------------------------------------------------------
-  important_values:
-    # --- Muito Baixa Cardinalidade (1-2 valores) ---
-    mercado:
-      - "PEDICOS"
-    canal_macro:
-      - "FARMA"
-    baruel_concorrencia:
-      - "Baruel"
-      - "Concorrencia"
-    lancamento:
-      - "SIM"
-      - "NAO"
-    beneficio:
-      - "Antisseptico"
-      - "Nao especificado"
-    rotina:
-      - "Nao especificado"
-    regular_promo_refil:
-      - "REGULAR"
-      - "PROMO"
-    canal:
-      - "Canal Redes"
-      - "Canal Indep/Assoc/Franq"
-    canal_interno:
-      - "FARMA REDES/TOP"
-      - "DIST. FARMA/ATACADO FARMA"
-    macro_regiao:
-      - "NENO"
-      - "SSECO"
-
-    # --- Baixa Cardinalidade (3-5 valores) ---
-    categoria:
-      - "COSMETICOS"
-      - "DESODORANTE"
-      - "INCOMODOS"
-    regiao:
-      - "SUDESTE"
-      - "SUL"
-      - "NORDESTE"
-      - "NORTE"
-      - "CENTRO OESTE"
-    publico:
-      - "Feminino"
-      - "Masculino"
-      - "Kids"
-      - "Nao especificado"
-    range_gramatura:
-      - "0-100"
-      - "0-153"
-      - "101+"
-      - "153+"
-      - "Nao especificado"
-
-    # --- Media Cardinalidade (6-30 valores) ---
-    subcategoria:
-      - "AEROSOL"
-      - "CALCANHARES"
-      - "CALCANHARES DANIFICADOS"
-      - "CALOS"
-      - "CREME"
-      - "CURATIVO"
-      - "Creme"
-      - "ESFOLIANTE"
-      - "GEL PEDICO"
-      - "JOANETE"
-      - "PELE SECA"
-      - "PERNAS CANSADAS"
-      - "PERNAS CANSADAS "
-      - "PLANTAR"
-      - "PO"
-    tipo:
-      - "Air system"
-      - "Almofada"
-      - "Balsamo"
-      - "Borracha"
-      - "Calcanhares"
-      - "Creme"
-      - "Emulsao"
-      - "Entre dedos"
-      - "Esporte"
-      - "Gel"
-      - "Hidrocoloide"
-      - "Locao"
-      - "Manteiga"
-      - "Nao especificado"
-      - "Oleo"
-      - "Pack"
-      - "Pes"
-      - "Plantar"
-      - "Po / Talco / Polvilho"
-      - "Silicone"
-      - "Spray"
-      - "Tendao"
-      - "Terapeutica"
-      - "Tubo"
-      - "com abas"
-    uf_montada:
-      - "AL_SE"
-      - "BA"
-      - "CE"
-      - "DF"
-      - "ES"
-      - "GO"
-      - "MA_PI"
-      - "MG"
-      - "MS"
-      - "MT"
-      - "PB"
-      - "PE"
-      - "PR"
-      - "RJ"
-      - "RN"
-      - "RR_AM_RO_AC"
-      - "RS"
-      - "SC"
-      - "SP"
-      - "TO_PA_AP"
-    categoria_com_range:
-      - "AEROSOL_0-153"
-      - "AEROSOL_153+"
-      - "CALCANHARES DANIFICADOS_0-100"
-      - "CALCANHARES DANIFICADOS_101+"
-      - "CALCANHARES_Nao especificado"
-      - "CALOS_Nao especificado"
-      - "CREME_0-100"
-      - "CREME_101+"
-      - "CURATIVO_Nao especificado"
-      - "Creme_0-100"
-      - "ESFOLIANTE_0-100"
-      - "ESFOLIANTE_101+"
-      - "GEL PEDICO_Nao especificado"
-      - "JOANETE_Nao especificado"
-      - "PELE SECA_0-100"
-      - "PELE SECA_101+"
-      - "PERNAS CANSADAS _101+"
-      - "PERNAS CANSADAS_0-100"
-      - "PERNAS CANSADAS_101+"
-      - "PLANTAR_Nao especificado"
-      - "PO_0-100"
-      - "PO_101+"
-    fragrancia:
-      - "Aloe Vera"
-      - "Amendoa"
-      - "Arnica"
-      - "Body"
-      - "Cacau"
-      - "Calendula"
-      - "Camomila"
-      - "Canfora"
-      - "Coco"
-      - "Delicate"
-      - "Efficient"
-      - "Floral"
-      - "Fresh"
-      - "Hortela"
-      - "Inverno"
-      - "Jasmin"
-      - "Lavanda"
-      - "Lima"
-      - "Limao"
-      - "Malaleuca"
-      - "Mel"
-      - "Menta"
-      - "Nao especificado"
-      - "Original"
-      - "Outono"
-      - "Rosa"
-      - "Sensitive"
-      - "Sport"
-      - "Suave"
-      - "Uva"
-      - "Yellow"
-
-
-# ============================================================================
-# ALIASES DE VALORES — Mapeamento de variacoes de input para valores reais
-# ============================================================================
-# Esta secao mapeia termos que o usuario pode digitar para os valores
-# exatos presentes no dataset. Usado pelo PreMatchEngine para resolver
-# variacoes de linguagem, abreviacoes, erros de digitacao e sinonimos.
-#
-# Formato: coluna -> {termo_usuario: valor_real_dataset}
-# ============================================================================
-value_aliases:
-  # --- baruel_concorrencia ---
-  baruel_concorrencia:
-    baruel: "Baruel"
-    "da baruel": "Baruel"
-    "de baruel": "Baruel"
-    "apenas baruel": "Baruel"
-    "so baruel": "Baruel"
-    "somente baruel": "Baruel"
-    "produtos baruel": "Baruel"
-    concorrencia: "Concorrencia"
-    concorrente: "Concorrencia"
-    concorrentes: "Concorrencia"
-    "vs concorrencia": "Concorrencia"
-
-  # --- mercado ---
-  mercado:
-    pedicos: "PEDICOS"
-    "mercado de pedicos": "PEDICOS"
-    "mercado pedicos": "PEDICOS"
-    "segmento pedicos": "PEDICOS"
-
-  # --- categoria ---
-  categoria:
-    cosmeticos: "COSMETICOS"
-    cosmetico: "COSMETICOS"
-    desodorante: "DESODORANTE"
-    desodorantes: "DESODORANTE"
-    incomodos: "INCOMODOS"
-    incomodo: "INCOMODOS"
-
-  # --- subcategoria ---
-  subcategoria:
-    aerosol: "AEROSOL"
-    aerossol: "AEROSOL"
-    spray: "AEROSOL"
-    sprays: "AEROSOL"
-    po: "PO"
-    talco: "PO"
-    polvilho: "PO"
-    "po talco": "PO"
-    creme: "CREME"
-    cremes: "CREME"
-    esfoliante: "ESFOLIANTE"
-    esfoliantes: "ESFOLIANTE"
-    curativo: "CURATIVO"
-    curativos: "CURATIVO"
-    calos: "CALOS"
-    calo: "CALOS"
-    calcanhares: "CALCANHARES"
-    calcanhar: "CALCANHARES"
-    "calcanhares danificados": "CALCANHARES DANIFICADOS"
-    joanete: "JOANETE"
-    joanetes: "JOANETE"
-    "pele seca": "PELE SECA"
-    "pernas cansadas": "PERNAS CANSADAS"
-    "gel pedico": "GEL PEDICO"
-    plantar: "PLANTAR"
-
-  # --- regiao ---
-  regiao:
-    sudeste: "SUDESTE"
-    sul: "SUL"
-    nordeste: "NORDESTE"
-    norte: "NORTE"
-    "centro oeste": "CENTRO OESTE"
-    "centro-oeste": "CENTRO OESTE"
-
-  # --- macro_regiao ---
-  macro_regiao:
-    neno: "NENO"
-    sseco: "SSECO"
-    "norte nordeste": "NENO"
-    "norte/nordeste": "NENO"
-    "sul sudeste centro oeste": "SSECO"
-    "sul/sudeste/centro-oeste": "SSECO"
-
-  # --- canal ---
-  canal:
-    "canal redes": "Canal Redes"
-    redes: "Canal Redes"
-    "canal independente": "Canal Indep/Assoc/Franq"
-    "canal indep": "Canal Indep/Assoc/Franq"
-    "independente": "Canal Indep/Assoc/Franq"
-    "associado": "Canal Indep/Assoc/Franq"
-    "franqueado": "Canal Indep/Assoc/Franq"
-
-  # --- canal_interno ---
-  canal_interno:
-    "farma redes": "FARMA REDES/TOP"
-    "redes top": "FARMA REDES/TOP"
-    "farma redes top": "FARMA REDES/TOP"
-    "distribuidora farma": "DIST. FARMA/ATACADO FARMA"
-    "atacado farma": "DIST. FARMA/ATACADO FARMA"
-    "dist farma": "DIST. FARMA/ATACADO FARMA"
-
-  # --- regular_promo_refil ---
-  regular_promo_refil:
-    regular: "REGULAR"
-    promo: "PROMO"
-    promocional: "PROMO"
-    promocao: "PROMO"
-
-  # --- lancamento ---
-  lancamento:
-    lancamento: "SIM"
-    lancamentos: "SIM"
-    "produto novo": "SIM"
-    "novos produtos": "SIM"
-
-  # --- publico ---
-  publico:
-    feminino: "Feminino"
-    mulher: "Feminino"
-    mulheres: "Feminino"
-    masculino: "Masculino"
-    homem: "Masculino"
-    homens: "Masculino"
-    kids: "Kids"
-    infantil: "Kids"
-    criancas: "Kids"
-
-  # --- tipo (tipos de produto) ---
-  tipo:
-    spray: "Spray"
-    "po talco": "Po / Talco / Polvilho"
-    talco: "Po / Talco / Polvilho"
-    polvilho: "Po / Talco / Polvilho"
-    creme: "Creme"
-    gel: "Gel"
-    locao: "Locao"
-    balsamo: "Balsamo"
-    oleo: "Oleo"
-    emulsao: "Emulsao"
-
-  # --- marca (aliases para marcas-chave referenciadas nas perguntas) ---
-  marca:
-    "tenys pe": "TENYS-PE (BAR)"
-    "tenys-pe": "TENYS-PE (BAR)"
-    tenyspe: "TENYS-PE (BAR)"
-    "tenys": "TENYS-PE (BAR)"
-    granado: "GRANADO (GRA)"
-    barla: "BARLA (LR4)"
-    "leite de rosas": "BARLA (LR4)"
-    "venalot": "VENALOT CREME (HYQ)"
-    "venalot creme": "VENALOT CREME (HYQ)"
-    fletop: "FLETOP (FQM)"
-    cedraflon: "CEDRAFLON (SVR)"
-    diabettx: "DIABETTX (G3A)"
-
-  # --- fabricante (aliases para fabricantes-chave) ---
-  fabricante:
-    baruel: "BARUEL"
-    granado: "GRANADO"
-    "leite de rosas": "LEITE DE ROSAS"
+  Numero de Compras: "Quantidade de linhas do dataset"
+  AC: "Acre"
+  AL: "Alagoas"
+  AP: "Amapá"
+  AM: "Amazonas"
+  BA: "Bahia"
+  CE: "Ceará"
+  DF: "Distrito Federal"
+  ES: "Espírito Santo"
+  GO: "Goiás"
+  MA: "Maranhão"
+  MT: "Mato Grosso"
+  MS: "Mato Grosso do Sul"
+  MG: "Minas Gerais"
+  PA: "Pará"
+  PB: "Paraíba"
+  PR: "Paraná"
+  PE: "Pernambuco"
+  PI: "Piauí"
+  RJ: "Rio de Janeiro"
+  RN: "Rio Grande do Norte"
+  RS: "Rio Grande do Sul"
+  RO: "Rondônia"
+  RR: "Roraima"
+  SC: "Santa Catarina"
+  SP: "São Paulo"
+  SE: "Sergipe"
+  TO: "Tocantins"
